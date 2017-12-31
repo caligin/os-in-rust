@@ -3,3 +3,5 @@ multiboot_header
 *.swp
 *.o
 *.iso
+Cargo.lock
+/target/
