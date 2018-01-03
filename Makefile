@@ -1,4 +1,4 @@
-.PHONY: all run clean
+.PHONY: all run clean ubuntu-deps
 
 all: os.iso
 
@@ -20,3 +20,9 @@ run: os.iso
 clean:
 	rm *.o os.iso isofiles/boot/kernel.bin || true
 	xargo clean
+
+ubuntu-deps:
+	sudo apt-get install -y nasm qemu grub-pc-bin xorriso
+	rustup override add nightly
+	rustup component add rust-src
+	which xargo || cargo install xargo
