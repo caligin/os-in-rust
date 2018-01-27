@@ -1,3 +1,8 @@
+use core::fmt;
+use core::ptr::Unique;
+use spin::Mutex;
+use volatile::Volatile;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
@@ -38,12 +43,10 @@ struct ScreenChar {
 
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
-use volatile::Volatile;
 struct Buffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
-use core::ptr::Unique;
 pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
@@ -97,8 +100,8 @@ impl Writer {
             self.buffer().chars[row][col].write(blank);
         }
     }
+
 }
-use core::fmt;
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
@@ -108,9 +111,30 @@ impl fmt::Write for Writer {
     }
 }
 
-use spin::Mutex;
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     column_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
     buffer: unsafe { Unique::new_unchecked(0xb8000 as *mut _) },
 });
+
+macro_rules! println {
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        $crate::vga_buffer::print(format_args!($($arg)*));
+    });
+}
+
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
+}
+
+pub fn clear_screen() {
+    for _ in 0..BUFFER_HEIGHT {
+        println!("");
+    }
+}
